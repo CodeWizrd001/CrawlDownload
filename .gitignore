@@ -1,0 +1,5 @@
+# Download folder
+output/
+
+# Lock Files
+*.lock
