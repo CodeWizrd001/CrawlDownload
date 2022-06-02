@@ -110,12 +110,29 @@ if __name__ == '__main__':
     if not os.path.exists(OUTPUT_FOLDER):
         os.makedirs(OUTPUT_FOLDER)
 
+    required_links.insert(0,'ALL')
+
+    for link in required_links:
+        print(f'[+] {required_links.index(link):>2d} : {link}')
+
+    required_links.remove('ALL')
+
+    try :
+        x = int(input('[+] File to download :'))
+        if x == 0 :
+            filesToDownload = required_links
+        else :
+            filesToDownload = [required_links[x]]
+    except :
+        print('[-] Invalid option')
+        filesToDownload = required_links
+
     print(f'[+] Downloading {len(required_links)} files')
 
     processList = []
     threadList = []
 
-    for link in required_links:
+    for link in filesToDownload:
         l = URL + link
         filename = link
         t = Thread(target=download, args=(l,filename,))
