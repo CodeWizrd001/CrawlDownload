@@ -1,3 +1,4 @@
+from numpy import require
 from tqdm import tqdm
 import time
 import sys
@@ -14,10 +15,13 @@ import requests
 
 INTERRUPT = False
 
+FILE_TYPE = 'ALL'
+
 def get_res(links) :
-    options = ['ALL']
+    options = ['SUBS','ALL']
     all = ['480', '720', '1080', '2160']
     keys = {
+        'SUBS' : -1,
         'ALL' : 0,
         '480' : 1,
         '720' : 2,
@@ -32,10 +36,22 @@ def get_res(links) :
     options.sort(key=keys.get)
     return options
 
+def get_filetypes(links) :
+    filetypes = []
+    for link in links :
+        if '.' in link :
+            filetypes.append(link.split('.')[-1])
+    return list(set(filetypes))
+
 def get_links(links,option) :
     res = []
     if option == 'ALL' :
         return list(links)
+    elif option == 'SUBS' :
+        for link in links :
+            if link.endswith('.srt') :
+                res.append(link)
+        return res
     for link in links :
         if option in link :
             res.append(link)
@@ -61,7 +77,7 @@ def download(url,filename) :
     total_size_in_bytes= int(response.headers.get('content-length', 0))
 
     progress_bar = tqdm(total=total_size_in_bytes, unit='iB', unit_scale=True)
-    progress_bar.set_description(filename)
+    progress_bar.set_description(filename[:30])
     with open(*outputFile) as file:
         for data in response.iter_content(block_size):
             if INTERRUPT :
@@ -72,6 +88,39 @@ def download(url,filename) :
     progress_bar.close()
     if total_size_in_bytes != 0 and progress_bar.n != total_size_in_bytes:
         print("ERROR, something went wrong")
+
+def download_video() :
+    options = get_res(links)
+    print(f'[+] Options:')
+    for option in options:
+        print(f'[{options.index(option):>2d}] {option}')
+
+    try :
+        option = options[int(input('[+] Choose an option: '))]
+    except ValueError as e:
+        print('[-] Invalid option')
+        option = 'ALL'
+    except IndexError as e:
+        print('[-] Invalid option')
+        option = 'ALL'
+    except KeyboardInterrupt as e:
+        print('[-] Interrupt')
+        INTERRUPT = True
+        sys.exit(0)
+
+    required_links = get_links(links,option)
+
+    if not os.path.exists(OUTPUT_FOLDER):
+        os.makedirs(OUTPUT_FOLDER)
+
+    required_links.insert(0,'ALL')
+
+    for link in required_links:
+        print(f'[+] {required_links.index(link):>2d} : {link}')
+
+    required_links.remove('ALL')
+
+    return required_links
 
 if __name__ == '__main__':
     try :
@@ -89,33 +138,15 @@ if __name__ == '__main__':
         links.append(link.get('href'))
         l[link.get('href')] = link.text
 
-    options = get_res(links)
+    availableFileTypes = get_filetypes(links)
 
-    print(f'[+] Options:')
-    for option in options:
-        print(f'[{options.index(option):>2d}] {option}')
+    print(f'[+] Available file types:')
+    for fileType in availableFileTypes:
+        print(f'[{availableFileTypes.index(fileType):>2d}] {fileType}')
+    
+    exit(0)
 
-    try :
-        option = options[int(input('[+] Choose an option: '))]
-    except :
-        print('[-] Invalid option')
-        option = 'ALL'
-
-    required_links = get_links(links,option)
-
-    for link in required_links:
-        if link.endswith('.mp4') or link.endswith('.mkv'):
-            print(f'[+] {l[link]}')
-
-    if not os.path.exists(OUTPUT_FOLDER):
-        os.makedirs(OUTPUT_FOLDER)
-
-    required_links.insert(0,'ALL')
-
-    for link in required_links:
-        print(f'[+] {required_links.index(link):>2d} : {link}')
-
-    required_links.remove('ALL')
+    required_links = download_video()
 
     try :
         x = int(input('[+] File to download :'))
@@ -123,9 +154,18 @@ if __name__ == '__main__':
             filesToDownload = required_links
         else :
             filesToDownload = [required_links[x]]
-    except :
+    except ValueError as e :
         print('[-] Invalid option')
         filesToDownload = required_links
+    except IndexError as e :
+        print('[-] Invalid option')
+        filesToDownload = required_links
+    except KeyboardInterrupt as e :
+        print('[-] Interrupt')
+        print('[-] Exiting')
+        sys.exit(0)
+    except Exception as e :
+        raise
 
     print(f'[+] Downloading {len(required_links)} files')
 
