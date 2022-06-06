@@ -86,13 +86,13 @@ def download(url,filename) :
     oFile = OUTPUT_FOLDER + filename
     block_size = 1024 #1 Kibibyte
     RESUME = False
-    if os.path.exists(oFile):
-        outputFile = (oFile,"ab")
+    if os.path.exists(oFile+'.tmp'):
+        outputFile = (oFile+'.tmp',"ab")
         existSize = os.path.getsize(oFile)
         headers["Range"] = "bytes=%s-" % (existSize)
         RESUME = True
     else:
-        outputFile = (oFile,"wb")
+        outputFile = (oFile'.tmp',"wb")
     response = requests.get(url,headers=headers,stream=True)
     total_size_in_bytes= int(response.headers.get('content-length', 0))
 
@@ -111,7 +111,7 @@ def download(url,filename) :
             progress_bar.update(len(data))
             file.write(data)
         file.close()
-        os.rename(oFile,FINAL_OUTPUT_FOLDER + filename)
+        os.rename(oFile+'.tmp',FINAL_OUTPUT_FOLDER + filename)
     progress_bar.close()
     if total_size_in_bytes != 0 and progress_bar.n != total_size_in_bytes:
         print("ERROR, something went wrong")
